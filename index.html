@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Builder</title>
+    <style>
+    
+        /* Pacify Game Theme - Dark, Horror-Inspired */
+        :root {
+            --main-bg: #0a0a0a;
+            --sidebar-bg: #111111;
+            --panel-bg: #1a1a1a;
+            --accent-red: #8b0000;
+            --accent-red-light: #a83232;
+            --text-main: #e0e0e0;
+            --text-dim: #aaaaaa;
+            --border-color: #333333;
+            --canvas-bg: #0f0f0f;
+            --element-bg: rgba(30, 30, 30, 0.8);
+            --element-border: #3a3a3a;
+            --resize-handle: var(--accent-red);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--main-bg);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            cursor: url('cursor.png') , auto;
+        }
+
+        .header {
+            background-color: var(--sidebar-bg);
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--accent-red);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .header h1 {
+            color: var(--accent-red);
+            text-shadow: 0 0 5px red,
+                         0 2px 2px #800000,
+                         0 4px 4px #660000;
+            letter-spacing: 1px;
+            animation: flicker 2s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            margin-bottom: 12px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .sidebar-title::after {
+            content: "";
+            display: block;
+            width: 30px;
+            height: 2px;
+            background: var(--accent-red);
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+        }
+
+        .draggable-element {
+            background-color: var(--panel-bg);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            cursor: grab;
+            transition: all 0.2s;
+            border-left: 3px solid var(--accent-red);
+            color: var(--text-main);
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .draggable-element:hover {
+            background-color: var(--accent-red);
+            transform: translateX(3px);
+        }
+
+        .draggable-element:active {
+            cursor: grabbing;
+        }
+        
+        .canvas-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, transparent 40%, #000 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .canvas-container {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+            background-color: var(--canvas-bg);
+            background-image: 
+                linear-gradient(rgba(139, 0, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 0, 0, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+        }
+
+        .canvas {
+            background-color: rgba(15, 15, 15, 0.7);
+            min-height: 100%;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--border-color);
+        }
+
+        .element {
+            position: absolute;
+            border: 1px solid var(--element-border);
+            padding: 10px;
+            cursor: move;
+            background-color: var(--element-bg);
+            user-select: none;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: box-shadow 0.2s;
+        }
+
+        .element:hover {
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+            border-color: var(--accent-red-light);
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
+            animation: glowPulse 2s infinite;
+
+        }
+
+        .element.selected {
+            border: 2px solid var(--accent-red);
+            z-index: 100;
+            box-shadow: 0 0 10px 2px red;
+        }
+
+        .resize-handle {
+            width: 10px;
+            height: 10px;
+            background-color: var(--resize-handle);
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            cursor: nwse-resize;
+            opacity: 0.7;
+        }
+
+        .resize-handle:hover {
+            opacity: 1;
+        }
+
+        .properties-panel {
+            width: 250px;
+            background-color: var(--panel-bg);
+            color: var(--text-main);
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        .property-group-title {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--accent-red);
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .property {
+            margin-bottom: 10px;
+        }
+
+        .property label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 3px;
+            color: var(--text-dim);
+        }
+
+        .property input, .property select, .property textarea {
+            width: 100%;
+            padding: 5px;
+            border-radius: 3px;
+            border: none;
+            background-color: var(--sidebar-bg);
+            color: var(--text-main);
+            font-family: 'Courier New', monospace;
+        }
+
+        .property textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        .btn {
+            background-color: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background-color: var(--accent-red-light);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.5);
+            text-shadow: 0 0 5px red;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 0 10px 2px red;
+            transition: 0.1s;
+        }
+
+        .btn-danger {
+            background-color: #4a0000;
+        }
+
+        .btn-danger:hover {
+            background-color: #6a0000;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .element-content {
+            pointer-events: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: var(--text-dim);
+            font-size: 18px;
+        }
+
+        .empty-state h2 {
+            color: var(--accent-red);
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px rgba(139, 0, 0, 0.3);
+        }
+
+        #fog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 1;
+            background: url('fog.jpg') repeat;
+            animation: fogMove 120s linear infinite;
+            background-size: cover;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+            52% { opacity: 1; }
+            54% { opacity: 0.5; }
+        }
+       
+        @keyframes lightningFlash {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(255, 255, 255, 0.15); }
+        }
+
+        .flash-effect {
+            animation: lightningFlash 0.4s ease;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 15px red; }
+            50% { box-shadow: 0 0 30px crimson; }
+        }
+
+        @keyframes fogMove {
+            0% { background-position: 0 0; }
+            100% { background-position: -1000px 0; }
+        }
+         
+        .btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: -30px;
+            background: #111;
+            color: #e0e0e0;
+            padding: 5px 10px;
+            font-size: 10px;
+            border: 1px solid red;
+            border-radius: 3px;
+            opacity: 0;
+            transform: translateY(5px);
+            transition: 0.3s;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .btn:hover::after {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="fog"></div>
+    <div class="header">
+        <h1>WEBSITE BUILDER</h1>
+        <div>
+            <button class="btn" data-tooltip="Summon the darkness">SAVE</button>
+            <button id="load-btn" class="btn">LOAD</button>
+            <button id="clear-btn" class="btn btn-danger">CLEAR</button>
+        </div>
+    </div>
+    
+    <audio id="sound-click" src="clicksound.mp3"></audio>
+    <audio id="sound-drag" src="clicksound.mp3"></audio>
+    <audio id="sound-drop" src="clicksound.mp3"></audio>
+    <audio id="sound-delete" src="clicksound.mp3"></audio>
+    <audio id="bg-music" src="bgsound.mp3" loop autoplay></audio>
+    <audio id="thunder-sound" src="https://www.fesliyanstudios.com/play-mp3/387" preload="auto"></audio>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">DARK ELEMENTS</div>
+                <div class="draggable-element" draggable="true" data-type="text" data-width="200" data-height="100">HAUNTED TEXT</div>
+                <div class="draggable-element" draggable="true" data-type="image" data-width="200" data-height="150">GHOSTLY IMAGE</div>
+                <div class="draggable-element" draggable="true" data-type="button" data-width="120" data-height="40">EVIL BUTTON</div>
+                <div class="draggable-element" draggable="true" data-type="div" data-width="200" data-height="200">DARK CONTAINER</div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">CURSED ITEMS</div>
+                <div class="draggable-element" draggable="true" data-type="input" data-width="200" data-height="30">FORBIDDEN INPUT</div>
+                <div class="draggable-element" draggable="true" data-type="textarea" data-width="200" data-height="100">DEMONIC TEXTAREA</div>
+                <div class="draggable-element" draggable="true" data-type="select" data-width="200" data-height="30">SHADOW DROPDOWN</div>
+                <div class="draggable-element" draggable="true" data-type="checkbox" data-width="200" data-height="20">CURSED CHECKBOX</div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas" id="canvas">
+                <div class="empty-state">
+                    <h2>THE DARKNESS AWAITS</h2>
+                    <p>Drag cursed elements from the shadows</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="properties-panel" id="properties-panel">
+            <div class="hidden" id="properties-content">
+                <div class="property-group">
+                    <div class="property-group-title">ELEMENT PROPERTIES</div>
+                    <div class="property">
+                        <label for="element-type">Type</label>
+                        <input type="text" id="element-type" disabled>
+                    </div>
+                    <div class="property">
+                        <label for="element-x">X Position</label>
+                        <input type="number" id="element-x">
+                    </div>
+                    <div class="property">
+                        <label for="element-y">Y Position</label>
+                        <input type="number" id="element-y">
+                    </div>
+                    <div class="property">
+                        <label for="element-width">Width</label>
+                        <input type="number" id="element-width">
+                    </div>
+                    <div class="property">
+                        <label for="element-height">Height</label>
+                        <input type="number" id="element-height">
+                    </div>
+                </div>
+
+                <div class="property-group" id="text-properties">
+                    <div class="property-group-title">TEXT PROPERTIES</div>
+                    <div class="property">
+                        <label for="text-content">Content</label>
+                        <textarea id="text-content"></textarea>
+                    </div>
+                    <div class="property">
+                        <label for="text-color">Color</label>
+                        <input type="color" id="text-color" value="#e0e0e0">
+                    </div>
+                    <div class="property">
+                        <label for="text-size">Font Size</label>
+                        <input type="number" id="text-size" value="16">
+                    </div>
+                </div>
+
+                <div class="property-group" id="image-properties">
+                    <div class="property-group-title">IMAGE PROPERTIES</div>
+                    <div class="property">
+                        <label for="image-src">Image URL</label>
+                        <input type="text" id="image-src" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="property">
+                        <label for="image-alt">Alt Text</label>
+                        <input type="text" id="image-alt" placeholder="Description of image">
+                    </div>
+                </div>
+
+                <div class="property-group" id="button-properties">
+                    <div class="property-group-title">BUTTON PROPERTIES</div>
+                    <div class="property">
+                        <label for="button-text">Button Text</label>
+                        <input type="text" id="button-text" value="DO NOT CLICK">
+                    </div>
+                    <div class="property">
+                        <label for="button-color">Background Color</label>
+                        <input type="color" id="button-color" value="#8b0000">
+                    </div>
+                    <div class="property">
+                        <label for="button-text-color">Text Color</label>
+                        <input type="color" id="button-text-color" value="#ffffff">
+                    </div>
+                </div>
+
+                <div class="property-group" id="div-properties">
+                    <div class="property-group-title">CONTAINER PROPERTIES</div>
+                    <div class="property">
+                        <label for="div-background">Background Color</label>
+                        <input type="color" id="div-background" value="#111111">
+                    </div>
+                    <div class="property">
+                        <label for="div-border">Border</label>
+                        <input type="text" id="div-border" value="1px solid #333">
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <button id="delete-element" class="btn btn-danger">DELETE ELEMENT</button>
+                </div>
+            </div>
+            <div id="no-selection">
+                <p>Select an element to edit its dark properties</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+         // Play thunder randomly every 60–120 seconds
+        function playThunder() {
+            const thunder = document.getElementById('thunder-sound');
+            thunder.currentTime = 0;
+            thunder.play().catch(() => {});
+        }
+        function scheduleThunder() {
+            const next = Math.floor(Math.random() * 60) + 60; // 60-120s
+            setTimeout(() => {
+                playThunder();
+                scheduleThunder();
+            }, next * 1000);
+        }
+        window.addEventListener('DOMContentLoaded', scheduleThunder);
+
+        document.addEventListener('click', function startMusicOnce() {
+            const music = document.getElementById('bg-music');
+            music.volume = 0.2;
+            music.play().catch(() => {});
+            document.removeEventListener('click', startMusicOnce);
+        });
+
+        // Haunted random messages
+        const messages = [
+            "Whispers echo in the void...",
+            "A shadow stirs behind you...",
+            "Don't look under the canvas...",
+            "Something watches your layout..."
+        ];
+
+        setInterval(() => {
+            const msg = document.createElement('div');
+            msg.textContent = messages[Math.floor(Math.random() * messages.length)];
+            msg.style.cssText = 'position:fixed;bottom:10px;left:10px;color:#a83232;font-size:12px;opacity:0.8;z-index:9999;';
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 5000);
+        }, 20000);
+
+        function playSound(id) {
+            const audio = document.getElementById(id);
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play();
+            }
+        }     
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const bgMusic = document.getElementById('bg-music');
+            bgMusic.volume = 0.2; // Reduce volume for ambiance
+
+            // Optional: Log if autoplay is blocked
+            bgMusic.play().catch(err => {
+                console.warn("Autoplay blocked until user interaction:", err);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const canvas = document.getElementById('canvas');
+            const propertiesPanel = document.getElementById('properties-panel');
+            const propertiesContent = document.getElementById('properties-content');
+            const noSelection = document.getElementById('no-selection');
+            const saveBtn = document.getElementById('save-btn');
+            const loadBtn = document.getElementById('load-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const deleteBtn = document.getElementById('delete-element');
+
+            // State variables
+            let selectedElement = null;
+            let isDragging = false;
+            let isResizing = false;
+            let startX, startY;
+            let startWidth, startHeight;
+            let offsetX, offsetY;
+            let elements = [];
+
+            // Initialize the builder
+            init();
+
+            function init() {
+                setupDraggableElements();
+                setupCanvasEvents();
+                setupPropertyInputs();
+                setupButtons();
+                checkEmptyState();
+            }
+
+            function setupDraggableElements() {
+                const draggables = document.querySelectorAll('.draggable-element');
+                
+                draggables.forEach(draggable => {
+                    draggable.addEventListener('dragstart', function(e) {
+                        playSound('sound-drag');
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            type: this.dataset.type,
+                            width: parseInt(this.dataset.width),
+                            height: parseInt(this.dataset.height)
+                        }));
+                        this.style.opacity = '0.5';
+                        this.style.borderLeftColor = '#ff0000';
+                    });
+
+                    draggable.addEventListener('dragend', function() {
+                        this.style.opacity = '1';
+                        this.style.borderLeftColor = 'var(--accent-red)';
+                    });
+                });
+            }
+
+            function setupCanvasEvents() {
+                canvas.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.style.boxShadow = 'inset 0 0 20px rgba(139, 0, 0, 0.5)';
+                });
+
+                canvas.addEventListener('dragleave', function() {
+                    this.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.7)';
+                });
+
+                canvas.addEventListener('drop', function(e) {
+                    playSound('sound-drag');
+                    e.preventDefault();
+                    this.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.7)';
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    createElement(data.type, e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top, data.width, data.height);
+                });
+
+                canvas.addEventListener('mousedown', function(e) {
+                    if (e.target.classList.contains('element') || e.target.classList.contains('element-content')) {
+                        // Handle element selection
+                        const element = e.target.classList.contains('element') ? e.target : e.target.parentElement;
+                        selectElement(element);
+                        
+                        // Check if resizing
+                        if (e.target.classList.contains('resize-handle')) {
+                            isResizing = true;
+                            startWidth = parseInt(element.style.width);
+                            startHeight = parseInt(element.style.height);
+                            startX = e.clientX;
+                            startY = e.clientY;
+                            return;
+                        }
+
+                        // Handle moving
+                        isDragging = true;
+                        offsetX = e.clientX - element.getBoundingClientRect().left;
+                        offsetY = e.clientY - element.getBoundingClientRect().top;
+                    } else {
+                        // Clicked on empty space - deselect
+                        if (selectedElement) {
+                            selectedElement.classList.remove('selected');
+                            selectedElement = null;
+                            showPropertiesPanel(false);
+                        }
+                    }
+                });
+
+                document.addEventListener('mousemove', function(e) {
+                    if (!isDragging && !isResizing) return;
+                    
+                    if (isDragging && selectedElement) {
+                        const x = e.clientX - canvas.getBoundingClientRect().left - offsetX;
+                        const y = e.clientY - canvas.getBoundingClientRect().top - offsetY;
+                        
+                        selectedElement.style.left = `${x}px`;
+                        selectedElement.style.top = `${y}px`;
+                        
+                        // Update properties panel
+                        document.getElementById('element-x').value = x;
+                        document.getElementById('element-y').value = y;
+                    }
+                    
+                    if (isResizing && selectedElement) {
+                        const width = startWidth + (e.clientX - startX);
+                        const height = startHeight + (e.clientY - startY);
+                        
+                        selectedElement.style.width = `${width}px`;
+                        selectedElement.style.height = `${height}px`;
+                        
+                        // Update properties panel
+                        document.getElementById('element-width').value = width;
+                        document.getElementById('element-height').value = height;
+                        
+                        // Update content dimensions if needed
+                        updateElementContent(selectedElement);
+                    }
+                });
+
+                document.addEventListener('mouseup', function() {
+                    isDragging = false;
+                    isResizing = false;
+                });
+            }
+
+            function createElement(type, x, y, width, height) {
+                const element = document.createElement('div');
+                element.className = 'element';
+                element.dataset.type = type;
+                
+                // Position and size
+                element.style.left = `${x}px`;
+                element.style.top = `${y}px`;
+                element.style.width = `${width}px`;
+                element.style.height = `${height}px`;
+                
+                // Create content based on type
+                const content = document.createElement('div');
+                content.className = 'element-content';
+                
+                switch(type) {
+                    case 'text':
+                        content.textContent = 'Whispers in the dark...';
+                        content.style.fontSize = '16px';
+                        content.style.color = '#e0e0e0';
+                        content.style.padding = '5px';
+                        break;
+                    case 'image':
+                        content.innerHTML = '<div style="width:100%;height:100%;background-color:#111;display:flex;align-items:center;justify-content:center;border:1px dashed #333;color:#555;">[Cursed Image]</div>';
+                        break;
+                    case 'button':
+                        content.innerHTML = '<button style="width:100%;height:100%;background-color:#8b0000;color:white;border:none;cursor:pointer;font-family:\'Courier New\',monospace;letter-spacing:1px;font-weight:bold;">DO NOT CLICK</button>';
+                        break;
+                    case 'div':
+                        content.style.width = '100%';
+                        content.style.height = '100%';
+                        content.style.backgroundColor = '#111111';
+                        content.style.border = '1px solid #333';
+                        break;
+                    case 'input':
+                        content.innerHTML = '<input type="text" style="width:100%;height:100%;background:#111;border:1px solid #333;color:#e0e0e0;padding:5px;" placeholder="Enter if you dare...">';
+                        break;
+                    case 'textarea':
+                        content.innerHTML = '<textarea style="width:100%;height:100%;background:#111;border:1px solid #333;color:#e0e0e0;padding:5px;"></textarea>';
+                        break;
+                    case 'select':
+                        content.innerHTML = '<select style="width:100%;height:100%;background:#111;border:1px solid #333;color:#e0e0e0;padding:5px;"><option>Option 1</option><option>Option 2</option></select>';
+                        break;
+                    case 'checkbox':
+                        content.innerHTML = '<label style="display:flex;align-items:center;gap:5px;color:#e0e0e0;"><input type="checkbox" style="accent-color:#8b0000;"> Cursed Choice</label>';
+                        break;
+                }
+                
+                element.appendChild(content);
+                
+                // Add resize handle
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle';
+                element.appendChild(resizeHandle);
+                
+                // Add to canvas
+                canvas.appendChild(element);
+                
+                // Hide empty state if it's the first element
+                checkEmptyState();
+                
+                // Select the new element
+                selectElement(element);
+                
+                // Double click to edit text
+                if (type === 'text') {
+                    content.addEventListener('dblclick', function() {
+                        const newText = prompt('Enter cursed text:', content.textContent);
+                        if (newText !== null) {
+                            content.textContent = newText;
+                            document.getElementById('text-content').value = newText;
+                        }
+                    });
+                }
+                
+                return element;
+            }
+
+            function selectElement(element) {
+                // Deselect previous element
+                if (selectedElement) {
+                    selectedElement.classList.remove('selected');
+                }
+                
+                // Select new element
+                selectedElement = element;
+                element.classList.add('selected');
+                
+                // Show properties panel
+                showPropertiesPanel(true);
+                
+                // Update property inputs
+                updatePropertyInputs();
+            }
+
+            function showPropertiesPanel(show) {
+                if (show) {
+                    propertiesContent.classList.remove('hidden');
+                    noSelection.classList.add('hidden');
+                } else {
+                    propertiesContent.classList.add('hidden');
+                    noSelection.classList.remove('hidden');
+                }
+            }
+
+            function updatePropertyInputs() {
+                if (!selectedElement) return;
+                
+                const type = selectedElement.dataset.type;
+                const content = selectedElement.querySelector('.element-content');
+                
+                // Basic properties
+                document.getElementById('element-type').value = type;
+                document.getElementById('element-x').value = parseInt(selectedElement.style.left);
+                document.getElementById('element-y').value = parseInt(selectedElement.style.top);
+                document.getElementById('element-width').value = parseInt(selectedElement.style.width);
+                document.getElementById('element-height').value = parseInt(selectedElement.style.height);
+                
+                // Hide all property groups first
+                document.querySelectorAll('.property-group').forEach(group => {
+                    if (group.id !== 'element-properties' && group.id.indexOf('properties') > -1) {
+                        group.classList.add('hidden');
+                    }
+                });
+                
+                // Show relevant property group
+                switch(type) {
+                    case 'text':
+                        document.getElementById('text-properties').classList.remove('hidden');
+                        document.getElementById('text-content').value = content.textContent;
+                        document.getElementById('text-color').value = rgbToHex(content.style.color) || '#e0e0e0';
+                        document.getElementById('text-size').value = parseInt(content.style.fontSize) || 16;
+                        break;
+                    case 'image':
+                        document.getElementById('image-properties').classList.remove('hidden');
+                        const imgDiv = content.querySelector('div');
+                        document.getElementById('image-src').value = imgDiv.dataset.src || '';
+                        document.getElementById('image-alt').value = imgDiv.dataset.alt || '';
+                        break;
+                    case 'button':
+                        document.getElementById('button-properties').classList.remove('hidden');
+                        const button = content.querySelector('button');
+                        document.getElementById('button-text').value = button.textContent;
+                        document.getElementById('button-color').value = rgbToHex(button.style.backgroundColor) || '#8b0000';
+                        document.getElementById('button-text-color').value = rgbToHex(button.style.color) || '#ffffff';
+                        break;
+                    case 'div':
+                        document.getElementById('div-properties').classList.remove('hidden');
+                        document.getElementById('div-background').value = rgbToHex(content.style.backgroundColor) || '#111111';
+                        document.getElementById('div-border').value = content.style.border || '1px solid #333';
+                        break;
+                }
+            }
+
+            function setupPropertyInputs() {
+                // Position and size inputs
+                document.getElementById('element-x').addEventListener('change', function() {
+                    if (selectedElement) {
+                        selectedElement.style.left = `${this.value}px`;
+                    }
+                });
+                
+                document.getElementById('element-y').addEventListener('change', function() {
+                    if (selectedElement) {
+                        selectedElement.style.top = `${this.value}px`;
+                    }
+                });
+                
+                document.getElementById('element-width').addEventListener('change', function() {
+                    if (selectedElement) {
+                        selectedElement.style.width = `${this.value}px`;
+                        updateElementContent(selectedElement);
+                    }
+                });
+                
+                document.getElementById('element-height').addEventListener('change', function() {
+                    if (selectedElement) {
+                        selectedElement.style.height = `${this.value}px`;
+                        updateElementContent(selectedElement);
+                    }
+                });
+                
+                // Text properties
+                document.getElementById('text-content').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'text') {
+                        selectedElement.querySelector('.element-content').textContent = this.value;
+                    }
+                });
+                
+                document.getElementById('text-color').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'text') {
+                        selectedElement.querySelector('.element-content').style.color = this.value;
+                    }
+                });
+                
+                document.getElementById('text-size').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'text') {
+                        selectedElement.querySelector('.element-content').style.fontSize = `${this.value}px`;
+                    }
+                });
+                
+                // Image properties
+                document.getElementById('image-src').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'image') {
+                        const imgDiv = selectedElement.querySelector('.element-content div');
+                        if (this.value) {
+                            imgDiv.innerHTML = '';
+                            const img = document.createElement('img');
+                            img.src = this.value;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'contain';
+                            imgDiv.appendChild(img);
+                            imgDiv.dataset.src = this.value;
+                        } else {
+                            imgDiv.innerHTML = '[Cursed Image]';
+                            imgDiv.style.backgroundColor = '#111';
+                            imgDiv.style.display = 'flex';
+                            imgDiv.style.alignItems = 'center';
+                            imgDiv.style.justifyContent = 'center';
+                            imgDiv.style.border = '1px dashed #333';
+                            imgDiv.style.color = '#555';
+                            delete imgDiv.dataset.src;
+                        }
+                    }
+                });
+                
+                document.getElementById('image-alt').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'image') {
+                        const imgDiv = selectedElement.querySelector('.element-content div');
+                        imgDiv.dataset.alt = this.value;
+                    }
+                });
+                
+                // Button properties
+                document.getElementById('button-text').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'button') {
+                        selectedElement.querySelector('.element-content button').textContent = this.value;
+                    }
+                });
+                
+                document.getElementById('button-color').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'button') {
+                        selectedElement.querySelector('.element-content button').style.backgroundColor = this.value;
+                    }
+                });
+                
+                document.getElementById('button-text-color').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'button') {
+                        selectedElement.querySelector('.element-content button').style.color = this.value;
+                    }
+                });
+                
+                // Div properties
+                document.getElementById('div-background').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'div') {
+                        selectedElement.querySelector('.element-content').style.backgroundColor = this.value;
+                    }
+                });
+                
+                document.getElementById('div-border').addEventListener('change', function() {
+                    if (selectedElement && selectedElement.dataset.type === 'div') {
+                        selectedElement.querySelector('.element-content').style.border = this.value;
+                    }
+                });
+            }
+
+            function setupButtons() {
+                saveBtn.addEventListener('click', saveLayout);
+                loadBtn.addEventListener('click', loadLayout);
+                clearBtn.addEventListener('click', clearCanvas);
+                deleteBtn.addEventListener('click', deleteElement);
+            }
+
+            function saveLayout() {
+                const layout = [];
+                playSound('sound-drag');
+                canvas.querySelectorAll('.element').forEach(el => {
+                    const type = el.dataset.type;
+                    const content = el.querySelector('.element-content');
+                    const data = {
+                        type,
+                        x: parseInt(el.style.left),
+                        y: parseInt(el.style.top),
+                        width: parseInt(el.style.width),
+                        height: parseInt(el.style.height)
+                    };
+
+                    switch (type) {
+                        case 'text':
+                            data.text = content.textContent;
+                            data.color = content.style.color;
+                            data.size = content.style.fontSize;
+                            break;
+                        case 'image':
+                            const imgDiv = content.querySelector('div');
+                            data.src = imgDiv.dataset.src || '';
+                            data.alt = imgDiv.dataset.alt || '';
+                            break;
+                        case 'button':
+                            const btn = content.querySelector('button');
+                            data.text = btn.textContent;
+                            data.bgColor = btn.style.backgroundColor;
+                            data.textColor = btn.style.color;
+                            break;
+                        case 'div':
+                            data.bgColor = content.style.backgroundColor;
+                            data.border = content.style.border;
+                            break;
+                    }
+
+                    layout.push(data);
+                });
+
+                localStorage.setItem('darkBuilderLayout', JSON.stringify(layout));
+                alert('Layout saved to darkness...');
+            }
+
+            function loadLayout() {
+                const layout = JSON.parse(localStorage.getItem('darkBuilderLayout'));
+                if (!layout) {
+                    alert('No cursed layout found.');
+                    return;
+                }
+
+                canvas.innerHTML = '';
+                layout.forEach(data => {
+                    const el = createElement(data.type, data.x, data.y, data.width, data.height);
+                    const content = el.querySelector('.element-content');
+
+                    switch (data.type) {
+                        case 'text':
+                            content.textContent = data.text;
+                            content.style.color = data.color;
+                            content.style.fontSize = data.size;
+                            break;
+                        case 'image':
+                            const imgDiv = content.querySelector('div');
+                            if (data.src) {
+                                imgDiv.innerHTML = '';
+                                const img = document.createElement('img');
+                                img.src = data.src;
+                                img.style.width = '100%';
+                                img.style.height = '100%';
+                                img.style.objectFit = 'contain';
+                                imgDiv.appendChild(img);
+                                imgDiv.dataset.src = data.src;
+                                imgDiv.dataset.alt = data.alt;
+                            }
+                            break;
+                        case 'button':
+                            const btn = content.querySelector('button');
+                            btn.textContent = data.text;
+                            btn.style.backgroundColor = data.bgColor;
+                            btn.style.color = data.textColor;
+                            break;
+                        case 'div':
+                            content.style.backgroundColor = data.bgColor;
+                            content.style.border = data.border;
+                            break;
+                    }
+                });
+
+                checkEmptyState();
+            }
+
+            function clearCanvas() {
+                if (confirm('Are you sure you want to remove all elements from the abyss?')) {
+                    canvas.innerHTML = '<div class="empty-state"><h2>THE DARKNESS AWAITS</h2><p>Drag cursed elements from the shadows</p></div>';
+                    selectedElement = null;
+                    showPropertiesPanel(false);
+                }
+            }
+
+            function deleteElement() {
+                playSound('sound-drag');
+                if (selectedElement) {
+                    selectedElement.remove();
+                    selectedElement = null;
+                    showPropertiesPanel(false);
+                    checkEmptyState();
+                }
+            }
+      
+            function updateElementContent(el) {
+                const content = el.querySelector('.element-content');
+                content.style.width = '100%';
+                content.style.height = '100%';
+            }
+
+            function checkEmptyState() {
+                if (canvas.querySelectorAll('.element').length === 0) {
+                    if (!canvas.querySelector('.empty-state')) {
+                        const state = document.createElement('div');
+                        state.className = 'empty-state';
+                        state.innerHTML = '<h2>THE DARKNESS AWAITS</h2><p>Drag cursed elements from the shadows</p>';
+                        canvas.appendChild(state);
+                    }
+                } else {
+                    const state = canvas.querySelector('.empty-state');
+                    if (state) state.remove();
+                }
+            }
+
+            function flashLightning() {
+                document.body.classList.add('flash-effect');
+                setTimeout(() => document.body.classList.remove('flash-effect'), 400);
+            }
+            function playThunder() {
+                const thunder = document.getElementById('thunder-sound');
+                thunder.currentTime = 0;
+                thunder.play().catch(() => {});
+                flashLightning(); // <- Add this line
+            }
+
+            function rgbToHex(rgb) {
+                if (!rgb) return '';
+                const result = rgb.match(/\d+/g);
+                if (!result || result.length < 3) return '#000000';
+                return "#" + result.slice(0, 3).map(x => {
+                    const hex = parseInt(x).toString(16);
+                    return hex.length === 1 ? "0" + hex : hex;
+                }).join('');
+            }
+        });
+    </script>
+</body>
+</html>
